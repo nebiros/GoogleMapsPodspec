@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
-  s.name = "GoogleMaps"
+  s.name = "GoogleMapsDynamicLibrary"
   s.version = "2.1.0"
-  s.summary = "A short description of GoogleMaps."
+  s.summary = "Google Maps SDK for iOS."
   s.description = <<-DESC
   Use the Google Maps SDK for iOS to enrich your app with interactive maps and immersive Street View panoramas.
                    DESC
