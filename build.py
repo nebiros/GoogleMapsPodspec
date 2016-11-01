@@ -18,11 +18,19 @@ SYSLIB_ROOT = {
                  "iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk",
 }
 BUILD_DIR = tempfile.mkdtemp()
-BINARY = "{build}/Frameworks/{name}.framework/Versions/A/{name}"\
-    .format(name=POD_NAME, build=BUILD_DIR)
-LIBTOOL_CMD = ["libtool", "-dynamic", BINARY, "-weak_framework",
-               "UIKit", "-weak_framework", "Foundation", "-ObjC",
-               "-install_name", "@rpath/{name}.framework/{name}".format(name=POD_NAME)]
+GOOGLE_MAPS_BASE_BINARY = "{build}/Subspecs/Base/Frameworks/GoogleMapsBase.framework/Versions/A/GoogleMapsBase".format(build=BUILD_DIR)
+GOOGLE_MAPS_FRAMEWORK_DIR = "{build}/Subspecs/Maps/Frameworks/GoogleMaps.framework".format(build=BUILD_DIR)
+GOOGLE_MAPS_BINARY = "{google_maps_framework_dir}/Versions/A/GoogleMaps".format(google_maps_framework_dir=GOOGLE_MAPS_FRAMEWORK_DIR)
+GOOGLE_MAPS_CORE_BINARY = "{build}/Subspecs/Maps/Frameworks/GoogleMapsCore.framework/Versions/A/GoogleMapsCore".format(build=BUILD_DIR)
+LIBTOOL_CMD = ["libtool", 
+    "-dynamic", GOOGLE_MAPS_BASE_BINARY, 
+    "-dynamic", GOOGLE_MAPS_BINARY, 
+    "-dynamic", GOOGLE_MAPS_CORE_BINARY, 
+    "-weak_framework", "UIKit", 
+    "-weak_framework", "Foundation", 
+    "-weak_framework", "Security", 
+    "-ObjC",
+    "-install_name", "@rpath/{name}.framework/{name}".format(name=POD_NAME)]
 
 
 def color(string, color="cyan"):
@@ -52,10 +60,20 @@ def parse_pod(name):
     """
     pods_json = subprocess.check_output(["pod", "spec", "cat", name])
     pod = json.loads(pods_json)
-
+    
     file_url = pod["source"]["http"]
-    frameworks = set(pod["frameworks"])
-    libraries = set(pod["libraries"]) | set(['objc', 'System'])
+    
+    frameworks = []
+    libraries = []
+    for spec in pod["subspecs"]:
+        if "frameworks" in spec:
+            frameworks += spec["frameworks"]
+
+        if "libraries" in spec:
+            libraries += spec["libraries"]
+
+    frameworks = set(frameworks)
+    libraries = set(libraries) | set(['objc', 'System'])
     return (file_url, frameworks, libraries)
 
 
@@ -94,7 +112,7 @@ def link(target="x86_64", frameworks=[], libraries=[]):
 def main():
     file_url, frameworks, libs = parse_pod(POD_NAME)
 
-    print color("Downloading file ...", color="purple")
+    print color("Downloading file {file_url}...".format(file_url=file_url), color="purple")
     compressed = urllib2.urlopen(file_url).read()
     tar = tarfile.open(fileobj=StringIO.StringIO(compressed))
 
@@ -109,8 +127,7 @@ def main():
     cmd = ["lipo", "-output", output, "-create"] + dylibs
     execute(cmd)
 
-    framework = "{build}/Frameworks/{name}.framework".format(name=POD_NAME,
-                                                             build=BUILD_DIR)
+    framework = GOOGLE_MAPS_FRAMEWORK_DIR
     framework_version = "{framework}/Versions/A".format(framework=framework)
     info_plist_source = "Versions/Current/Info.plist".format(framework_version=framework_version)
     info_plist_target = "{framework}/Info.plist".format(framework=framework)
@@ -134,7 +151,7 @@ def main():
     os.remove("{framework}/Resources".format(framework=framework))
 
     print color(u"\U0001f680  Replacing binary and creating tar.gz ...")
-    shutil.move(output, BINARY)
+    shutil.move(output, GOOGLE_MAPS_BINARY)
 
     tarfile_name = file_url.rsplit("/", 1)[-1]
     targz = tarfile.open(tarfile_name, "w:gz")
