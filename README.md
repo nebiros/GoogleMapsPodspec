@@ -7,7 +7,7 @@ How to use it
 -------------
 
 ```
-pod 'GoogleMaps', :podspec => "https://raw.githubusercontent.com/Reflejo/GoogleMapsPodspec/master/GoogleMaps.podspec.json"
+pod "GoogleMaps", :podspec => "https://raw.githubusercontent.com/nebiros/GoogleMapsPodspec/master/GoogleMaps.podspec.json"
 ```
 
 How to build your own
